@@ -253,8 +253,7 @@ export class Queue {
     jobs = (queueLifespanRemaining)
       ? jobs.filter(j => (!j.active && j.failed === null && j.timeout > 0 && j.timeout < timeoutUpperBound))
       : jobs.filter(j => (!j.active && j.failed === null));
-    jobs = _.orderBy(jobs, ['priority', 'created'], ['asc', 'asc']);
-    // NOTE: here and below 'created' is sorted by 'asc' however in original it's 'desc'
+    jobs = _.orderBy(jobs, ['priority', 'created'], ['desc', 'asc']);
 
     if (jobs.length) {
       nextJob = jobs[0];
@@ -269,7 +268,7 @@ export class Queue {
       allRelatedJobs = (queueLifespanRemaining) 
         ? allRelatedJobs.filter(j => (j.name === nextJob.name && !j.active && j.failed === null && j.timeout > 0 && j.timeout < timeoutUpperBound))
         : allRelatedJobs.filter(j => (j.name === nextJob.name && !j.active && j.failed === null));
-      allRelatedJobs = _.orderBy(allRelatedJobs, ['priority', 'created'], ['asc', 'asc']);
+      allRelatedJobs = _.orderBy(allRelatedJobs, ['priority', 'created'], ['desc', 'asc']);
 
       let jobsToMarkActive = allRelatedJobs.slice(0, concurrency);
 
@@ -286,7 +285,7 @@ export class Queue {
       // Reselect now-active concurrent jobs by id.
       let reselectedJobs = this.jobDB.objects();
       reselectedJobs = reselectedJobs.filter(rj => _.includes(concurrentJobIds, rj.id));
-      reselectedJobs = _.orderBy(reselectedJobs, ['priority', 'created'], ['asc', 'asc']);
+      reselectedJobs = _.orderBy(reselectedJobs, ['priority', 'created'], ['desc', 'asc']);
 
       concurrentJobs = reselectedJobs.slice(0, concurrency);
 
@@ -395,7 +394,6 @@ export class Queue {
       jobs = jobs.filter(j => j.name === jobName);
 
       if (jobs.length) {
-        // NOTE: might not work
         this.jobDB.delete(jobs);
       }
 

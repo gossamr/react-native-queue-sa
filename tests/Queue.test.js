@@ -6,11 +6,20 @@
 import should from 'should'; // eslint-disable-line no-unused-vars
 import QueueFactory, { Queue } from '../Models/Queue';
 import Worker from '../Models/Worker';
+import MockAsyncStorage from 'mock-async-storage';
+
+
+const mock = () => {
+  const mockImpl = new MockAsyncStorage();
+  jest.mock('@react-native-community/async-storage', () => mockImpl);
+};
+
+mock();
+
 
 describe('Models/Queue', function() {
 
   beforeEach(async () => {
-
     // Make sure each test starts with a fresh database.
     const queue = await QueueFactory();
     queue.flushQueue();
@@ -22,7 +31,6 @@ describe('Models/Queue', function() {
   //
 
   it('#start(lifespan) queue with lifespan does not process jobs that have no timeout set.', async () => {
-
     const queue = await QueueFactory();
     const jobName = 'job-name';
 
@@ -666,34 +674,33 @@ describe('Models/Queue', function() {
     const queueNotInitialized = new Queue();
 
     queueNotInitialized.should.have.properties({
-      realm: null,
+      jobDB: null,
       worker: new Worker(),
       status: 'inactive'
     });
 
   });
 
-  it('QueueFactory initializes Realm', async () => {
+  it('QueueFactory initializes DB', async () => {
 
     const queue = await QueueFactory();
 
-    queue.realm.constructor.name.should.equal('Realm');
-
+    queue.jobDB.should.not.empty();
   });
 
-  it('init() Calling init() multiple times will only set queue.realm once.', async () => {
+  it('init() Calling init() multiple times will only set queue.jobDB once.', async () => {
 
     const queue = await QueueFactory();
 
-    queue.realm.constructor.name.should.equal('Realm');
+    queue.jobDB.should.not.empty();
 
     // Overwrite realm instance to test it doesn't get set to the actual
     // Realm singleton instance again in init() since queue.realm is no longer null.
-    queue.realm = 'arbitrary-string';
+    queue.jobDB = 'arbitrary-string';
 
     queue.init();
 
-    queue.realm.should.equal('arbitrary-string');
+    queue.jobDB.should.equal('arbitrary-string');
 
   });
 
@@ -1581,7 +1588,7 @@ describe('Models/Queue', function() {
 
     // Mock queue.realm.delete() so we can test that it has not been called.
     let hasDeleteBeenCalled = false;
-    queue.realm.delete = () => {
+    queue.jobDB.delete = () => {
       hasDeleteBeenCalled = true; // Switch flag if function gets called.
     };
 
