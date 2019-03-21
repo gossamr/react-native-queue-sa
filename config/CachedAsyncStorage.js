@@ -32,8 +32,7 @@ JobSchema = {
 const BACKUP_TIME = 50;
 const Job = '@queue:Job';
 
-export default class Database {
-  db = [];
+export default class CachedAsyncStorage {
 
   init = async () => {
     // await storage.delete(Job); // to delete all jobs
@@ -75,7 +74,12 @@ export default class Database {
   }
 
   delete = (obj) => {
-    this.db = this.db.filter(o => o.id !== obj.id);
+    if(!Array.isArray(obj)) {
+      this.db = this.db.filter((el)=> el.id !== obj.id);
+    }else{
+      let ids = obj.map(a => a.id);
+      this.db = this.db.filter((el)=> ids.indexOf(el.id)===-1);
+    }
   };
 
   deleteAll = () => {
