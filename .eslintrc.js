@@ -34,5 +34,6 @@ module.exports = {
       "always"
     ],
     "no-var": "error"
-  }
+  },
+  "plugins": ["jest"]
 };
