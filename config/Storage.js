@@ -63,11 +63,31 @@ const deviceStorage = {
         return deviceStorage.save(key, [value]);
       }
       if (Array.isArray(currentValue)) {
-        return deviceStorage.save(key, [...currentValue, value]);
+        currentValue.push(value)
+        return deviceStorage.save(key, currentValue);
       }
       throw new Error(`Existing value for key "${key}" must be of type null or Array, received ${typeof currentValue}.`);
     });
   },
+
+  /**
+   * Gets all keys known to the app, for all callers, libraries, etc
+   * @return the array of keys in the storage
+   */
+  getKeys: async (prefix = null) => {
+    let result = await AsyncStorage.getAllKeys();
+    if(prefix){
+      result = result.filter((e)=>e.startsWith(prefix));
+    }
+    return result;
+  },
+
+  /**
+   * Deletes all the items in the storage.
+   */
+  deleteAll: async ()=>{
+    AsyncStorage.clear();
+  }
 };
 
 export default deviceStorage;
