@@ -22,7 +22,7 @@ describe('Models/Queue', function() {
   beforeEach(async () => {
     // Make sure each test starts with a fresh database.
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
 
   });
 
@@ -37,9 +37,9 @@ describe('Models/Queue', function() {
     queue.addWorker(jobName, () => {});
 
     // Create a couple jobs
-    queue.createJob(jobName, {}, {}, false);
-    queue.createJob(jobName, {}, {}, false);
-    queue.createJob(jobName, {}, {}, false);
+    await queue.createJob(jobName, {}, {}, false);
+    await queue.createJob(jobName, {}, {}, false);
+    await queue.createJob(jobName, {}, {}, false);
 
     // startQueue is false so queue should not have started.
     queue.status.should.equal('inactive');
@@ -64,7 +64,7 @@ describe('Models/Queue', function() {
   it('#start(lifespan) FUNDAMENTAL TEST (queue started with lifespan will process a job with job timeout set).', async () => {
 
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
     const jobName = 'job-name';
 
     // Track the jobs that have executed to test against.
@@ -78,7 +78,7 @@ describe('Models/Queue', function() {
     });
 
     // Create a job but don't auto-start queue
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: jobName
     }, {
       timeout: 100
@@ -117,7 +117,7 @@ describe('Models/Queue', function() {
     }
 
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
     const jobName = 'job-name';
     const queueLifespan = 2000;
     let remainingLifespan = queueLifespan;
@@ -153,7 +153,7 @@ describe('Models/Queue', function() {
     // 2000 (lifespan) - 200 (job1)  - 200 (job2) - 1000 (job3) - 50 (job 4) - 100 (timeout value for job 5 overflows remaining lifespan + 500ms for buffer so job5 will not exec) < 500
 
     // Create a couple jobs
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job1',
       payloadTimeout: 200,
       payloadOptionsTimeout: 300 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -167,7 +167,7 @@ describe('Models/Queue', function() {
     // ordering when we pop jobs off the top of the queue.
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job2',
       payloadTimeout: 200,
       payloadOptionsTimeout: 300 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -176,7 +176,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job3',
       payloadTimeout: 1000,
       payloadOptionsTimeout: 1100 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -185,7 +185,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job4',
       payloadTimeout: 500,
       payloadOptionsTimeout: 600 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -194,7 +194,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job5',
       payloadTimeout: 50,
       payloadOptionsTimeout: 75 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -203,7 +203,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job6',
       payloadTimeout: 25,
       payloadOptionsTimeout: 100 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -212,7 +212,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job7',
       payloadTimeout: 1100,
       payloadOptionsTimeout: 1200 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -272,7 +272,7 @@ describe('Models/Queue', function() {
     }
 
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
     const jobName = 'job-name';
     const anotherJobName = 'another-job-name';
     const timeoutJobName = 'timeout-job-name';
@@ -369,7 +369,7 @@ describe('Models/Queue', function() {
     }, { concurrency: 4});
 
     // Create a couple jobs
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job1-job-name-payloadTimeout(100)-timeout(200)-priority(-1)',
       payloadTimeout: 100,
       payloadOptionsTimeout: 200 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -384,7 +384,7 @@ describe('Models/Queue', function() {
     // ordering when we pop jobs off the top of the queue.
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(anotherJobName, {
+    await queue.createJob(anotherJobName, {
       trackingName: 'job2-another-job-name-payloadTimeout(1000)-timeout(1100)-priority(0)',
       payloadTimeout: 1000,
       payloadOptionsTimeout: 1100 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -393,7 +393,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(anotherJobName, {
+    await queue.createJob(anotherJobName, {
       trackingName: 'job3-another-job-name-payloadTimeout(750)-timeout(800)-priority(10)',
       payloadTimeout: 750,
       payloadOptionsTimeout: 800 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -403,7 +403,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job4-job-name-payloadTimeout(10000)-timeout(10100)-priority(0)',
       payloadTimeout: 10000,
       payloadOptionsTimeout: 10100 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -412,7 +412,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job5-job-name-payloadTimeout(400)-timeout(500)-priority(0)',
       payloadTimeout: 400,
       payloadOptionsTimeout: 500 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -421,7 +421,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(timeoutJobName, {
+    await queue.createJob(timeoutJobName, {
       trackingName: 'job6-timeout-job-name-payloadTimeout(10000)-timeout(500)-priority(0)',
       payloadTimeout: 10000,
       payloadOptionsTimeout: 500 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -430,7 +430,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job7-job-name-payloadTimeout(1000)-timeout(1100)-priority(1)',
       payloadTimeout: 1000,
       payloadOptionsTimeout: 1100 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -442,7 +442,7 @@ describe('Models/Queue', function() {
 
 
     // Create concurrent jobs
-    queue.createJob(concurrentJobName, {
+    await queue.createJob(concurrentJobName, {
       trackingName: 'job8-concurrent-job-name-payloadTimeout(500)-timeout(600)-priority(0)',
       payloadTimeout: 500,
       payloadOptionsTimeout: 600 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -452,7 +452,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(concurrentJobName, {
+    await queue.createJob(concurrentJobName, {
       trackingName: 'job9-concurrent-job-name-payloadTimeout(510)-timeout(600)-priority(0)',
       payloadTimeout: 510,
       payloadOptionsTimeout: 600 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -462,7 +462,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(concurrentJobName, {
+    await queue.createJob(concurrentJobName, {
       trackingName: 'job10-concurrent-job-name-payloadTimeout(10000)-timeout(10100)-priority(0)', // THIS JOB WILL BE SKIPPED BY getConcurrentJobs() due to timeout too long.
       payloadTimeout: 10000,
       payloadOptionsTimeout: 10100 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -472,7 +472,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(concurrentJobName, {
+    await queue.createJob(concurrentJobName, {
       trackingName: 'job11-concurrent-job-name-payloadTimeout(600)-timeout(700)-priority(0)',
       payloadTimeout: 600,
       payloadOptionsTimeout: 700 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -482,7 +482,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job12-job-name-payloadTimeout(100)-timeout(200)-priority(0)',
       payloadTimeout: 100,
       payloadOptionsTimeout: 200 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -491,7 +491,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job13-job-name-payloadTimeout(400)-timeout(500)-priority(0)', // THIS JOB WON'T BE RUN BECAUSE THE TIMEOUT IS 500 AND ONLY 950ms left by this pount. 950 - 500 = 450 and 500 remaining is min for job to be pulled.
       payloadTimeout: 400,
       payloadOptionsTimeout: 500 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -500,7 +500,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job14-job-name-payloadTimeout(100)-timeout(200)-priority(0)',
       payloadTimeout: 100,
       payloadOptionsTimeout: 200 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -509,7 +509,7 @@ describe('Models/Queue', function() {
     }, false);
     await new Promise((resolve) => { setTimeout(resolve, 25); });
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       trackingName: 'job15-job-name-payloadTimeout(500)-timeout(600)-priority(0)', // THIS JOB WON'T BE RUN BECAUSE out of time!
       payloadTimeout: 500,
       payloadOptionsTimeout: 600 // Mirror the actual job options timeout in payload so we can use it for testing.
@@ -591,7 +591,7 @@ describe('Models/Queue', function() {
     });
 
     // Create a job
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 100 // Timeout must be set to test that job still isn't grabbed during "zero lifespanRemaining" edge case.
     }, false);
 
@@ -631,13 +631,13 @@ describe('Models/Queue', function() {
     });
 
     // Create jobs
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 100 // Timeout must be set to test that job still isn't grabbed during "zero lifespanRemaining" edge case.
     }, false);
 
     await new Promise((resolve) => { setTimeout(resolve, 25); }); // Space out inserts so time sorting is deterministic.
 
-    queue.createJob(jobName, {
+    await queue.createJob(jobName, {
       testIdentifier: 'this is 2nd job'
     }, {
       timeout: 100 // Timeout must be set to test that job still isn't grabbed during "zero lifespanRemaining" edge case.
@@ -737,7 +737,7 @@ describe('Models/Queue', function() {
     const queue = await QueueFactory();
 
     try {
-      await queue.createJob();
+      await await queue.createJob();
       throw new Error('Job with no name should have thrown error.');
     } catch (error) {
       error.should.deepEqual(new Error('Job name must be supplied.'));
@@ -753,7 +753,7 @@ describe('Models/Queue', function() {
     queue.addWorker(jobName, () => {});
 
     try {
-      await queue.createJob(jobName, {}, {
+      await await queue.createJob(jobName, {}, {
         timeout: -100
       }, false);
       throw new Error('createJob() should validate job timeout option.');
@@ -762,7 +762,7 @@ describe('Models/Queue', function() {
     }
 
     try {
-      await queue.createJob(jobName, {}, {
+      await await queue.createJob(jobName, {}, {
         attempts: -100
       }, false);
       throw new Error('createJob() should validate job attempts option.');
@@ -779,7 +779,7 @@ describe('Models/Queue', function() {
 
     queue.addWorker(jobName, () => {});
 
-    queue.createJob(jobName, {}, {}, false);
+    await queue.createJob(jobName, {}, {}, false);
 
     // startQueue is false so queue should not have started.
     queue.status.should.equal('inactive');
@@ -807,7 +807,7 @@ describe('Models/Queue', function() {
 
     queue.addWorker(jobName, () => {});
 
-    queue.createJob(jobName, payload, jobOptions, false);
+    await queue.createJob(jobName, payload, jobOptions, false);
 
     // startQueue is false so queue should not have started.
     queue.status.should.equal('inactive');
@@ -834,7 +834,7 @@ describe('Models/Queue', function() {
 
     queue.addWorker(jobName, () => {});
 
-    queue.createJob(jobName, payload, jobOptions, true);
+    await queue.createJob(jobName, payload, jobOptions, true);
     queue.status.should.equal('active');
 
     queue.stop();
@@ -857,8 +857,8 @@ describe('Models/Queue', function() {
     });
 
     // Create a couple jobs
-    queue.createJob(jobName, payload, jobOptions, false);
-    queue.createJob(jobName, payload, jobOptions, false);
+    await queue.createJob(jobName, payload, jobOptions, false);
+    await queue.createJob(jobName, payload, jobOptions, false);
 
     // startQueue is false so queue should not have started.
     queue.status.should.equal('inactive');
@@ -903,8 +903,8 @@ describe('Models/Queue', function() {
     });
 
     // Create a couple jobs
-    queue.createJob(jobName, payload, jobOptions, false);
-    queue.createJob(jobName, payload, jobOptions, false);
+    await queue.createJob(jobName, payload, jobOptions, false);
+    await queue.createJob(jobName, payload, jobOptions, false);
 
     // startQueue is false so queue should not have started.
     queue.status.should.equal('inactive');
@@ -932,10 +932,10 @@ describe('Models/Queue', function() {
     queue.addWorker(jobName, () => {});
 
     // Create a couple jobs
-    queue.createJob(jobName, payload, jobOptions, false);
-    queue.createJob(jobName, payload, jobOptions, false);
-    queue.createJob(jobName, payload, jobOptions, false);
-    queue.createJob(jobName, payload, jobOptions, false);
+    await queue.createJob(jobName, payload, jobOptions, false);
+    await queue.createJob(jobName, payload, jobOptions, false);
+    await queue.createJob(jobName, payload, jobOptions, false);
+    await queue.createJob(jobName, payload, jobOptions, false);
 
     const jobs = await queue.getJobs(true);
 
@@ -957,13 +957,13 @@ describe('Models/Queue', function() {
     });
 
     // Test that jobs with no timeout set will not be returned by getConcurrentJobs() if queueLifespanRemaining is passed.
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 0
     }, false);
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 0
     }, false);
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 0
     }, false);
 
@@ -973,16 +973,16 @@ describe('Models/Queue', function() {
     jobs.length.should.equal(0);
 
     // Reset DB
-    queue.flushQueue();
+    await queue.flushQueue();
 
     // Test that jobs with timeout not at least 500ms less than queueLifespanRemaining are not grabbed.
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 500
     }, false);
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 500
     }, false);
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 500
     }, false);
 
@@ -992,16 +992,16 @@ describe('Models/Queue', function() {
     notEnoughBufferJobs.length.should.equal(0);
 
     // Reset DB
-    queue.flushQueue();
+    await queue.flushQueue();
 
     //Lower bound edge case test
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 0
     }, false);
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 1
     }, false);
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 1
     }, false);
 
@@ -1014,19 +1014,19 @@ describe('Models/Queue', function() {
     lowerBoundEdgeCaseJobs.length.should.equal(2);
 
     // Reset DB
-    queue.flushQueue();
+    await queue.flushQueue();
 
     //Test concurrency is working as expected with lifespans.
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 800
     }, false);
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 1000
     }, false);
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 1000
     }, false);
-    queue.createJob(jobName, {}, {
+    await queue.createJob(jobName, {}, {
       timeout: 1000
     }, false);
 
@@ -1040,7 +1040,7 @@ describe('Models/Queue', function() {
     lifespanConcurrencyJobs.length.should.equal(3);
 
     // Reset DB
-    queue.flushQueue();
+    await queue.flushQueue();
 
   });
 
@@ -1056,11 +1056,11 @@ describe('Models/Queue', function() {
     queue.addWorker('a-different-job', () => {});
 
     // Create a couple jobs
-    queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
-    queue.createJob('a-different-job', { dummy: 'data' }, {}, false); // This should not be returned by concurrentJobs() should all be of the 'job-name' type.
-    queue.createJob(jobName, { random: 'this is 2nd random data' }, jobOptions, false);
-    queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
-    queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
+    await queue.createJob('a-different-job', { dummy: 'data' }, {}, false); // This should not be returned by concurrentJobs() should all be of the 'job-name' type.
+    await queue.createJob(jobName, { random: 'this is 2nd random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
 
     const concurrentJobs = await queue.getConcurrentJobs();
 
@@ -1088,11 +1088,11 @@ describe('Models/Queue', function() {
     queue.addWorker('a-different-job', () => {});
 
     // Create a couple jobs
-    queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
-    queue.createJob('a-different-job', { dummy: 'data' }, {}, false); // This should not be returned by concurrentJobs() should all be of the 'job-name' type.
-    queue.createJob(jobName, { random: 'this is 2nd random data' }, jobOptions, false);
-    queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
-    queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
+    await queue.createJob('a-different-job', { dummy: 'data' }, {}, false); // This should not be returned by concurrentJobs() should all be of the 'job-name' type.
+    await queue.createJob(jobName, { random: 'this is 2nd random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
 
     const concurrentJobs = await queue.getConcurrentJobs();
 
@@ -1123,13 +1123,13 @@ describe('Models/Queue', function() {
     });
 
     // Create a couple jobs
-    queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
-    queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 2nd random data' }, jobOptions, false);
-    queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5 }, false);
-    queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
-    queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
+    await queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 2nd random data' }, jobOptions, false);
+    await queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5 }, false);
+    await queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
 
     const concurrentJobs = await queue.getConcurrentJobs();
 
@@ -1161,13 +1161,13 @@ describe('Models/Queue', function() {
     });
 
     // Create a couple jobs
-    queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
-    queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 2nd random data' }, jobOptions, false);
-    queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5 }, false);
-    queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
-    queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
+    await queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 2nd random data' }, jobOptions, false);
+    await queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5 }, false);
+    await queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
 
     // Jobs returned by getConcurrentJobs() are marked "active" so they won't be returned by future getConcurrentJobs() calls.
     const concurrentJobs = await queue.getConcurrentJobs();
@@ -1197,13 +1197,13 @@ describe('Models/Queue', function() {
     });
 
     // Create a couple jobs
-    queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
-    queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 2nd random data' }, { priority: 4 }, false);
-    queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5 }, false);
-    queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
-    queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
+    await queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 2nd random data' }, { priority: 4 }, false);
+    await queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5 }, false);
+    await queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
 
     // Jobs returned by getConcurrentJobs() are marked "active" so they won't be returned by future getConcurrentJobs() calls.
     const concurrentJobs = await queue.getConcurrentJobs();
@@ -1268,13 +1268,13 @@ describe('Models/Queue', function() {
     });
 
     // Create a couple jobs
-    queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
-    queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 2nd random data' }, jobOptions, false);
-    queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5 }, false);
-    queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
-    queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
+    await queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 2nd random data' }, jobOptions, false);
+    await queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5 }, false);
+    await queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
 
     // Jobs returned by getConcurrentJobs() are marked "active" so they won't be returned by future getConcurrentJobs() calls.
     const concurrentJobs = await queue.getConcurrentJobs();
@@ -1306,7 +1306,7 @@ describe('Models/Queue', function() {
   it('#processJob() increments failedAttempts counter until max attempts then fails on job failure.', async () => {
 
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
     const jobName = 'job-name';
     const jobOptions = { priority: 0, timeout: 3000, attempts: 3};
 
@@ -1328,13 +1328,13 @@ describe('Models/Queue', function() {
     });
 
     // Create a couple jobs
-    queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
-    queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 2nd random data' }, { priority: 1, timeout: 3000, attempts: 3}, false);
-    queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5, attempts: 3 }, false);
-    queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
-    queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
+    await queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 2nd random data' }, { priority: 1, timeout: 3000, attempts: 3}, false);
+    await queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5, attempts: 3 }, false);
+    await queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
 
     // Jobs returned by getConcurrentJobs() are marked "active" so they won't be returned by future getConcurrentJobs() calls.
     const concurrentJobs = await queue.getConcurrentJobs();
@@ -1403,7 +1403,7 @@ describe('Models/Queue', function() {
     failedJobData.failedAttempts.should.equal(3);
 
     // Ensure job marked as failed.
-    failedJob.failed.should.be.a.Date();
+    failedJob.failed.should.not.be.empty;
 
     // Next getConcurrentJobs() should now finally return 'job-name' type jobs.
     const fourthConcurrentJobs = await queue.getConcurrentJobs();
@@ -1427,7 +1427,7 @@ describe('Models/Queue', function() {
 
     }, {});
 
-    queue.createJob(jobName, {}, jobOptions, false);
+    await queue.createJob(jobName, {}, jobOptions, false);
 
     const jobs = await queue.getConcurrentJobs();
 
@@ -1483,7 +1483,7 @@ describe('Models/Queue', function() {
 
     });
 
-    queue.createJob(jobName, {}, jobOptions, false);
+    await queue.createJob(jobName, {}, jobOptions, false);
 
     const jobs = await queue.getConcurrentJobs();
 
@@ -1519,19 +1519,19 @@ describe('Models/Queue', function() {
     });
 
     // Create a couple jobs
-    queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
-    queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 2nd random data' }, { priority: 4 }, false);
-    queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5 }, false);
-    queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
-    queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
+    await queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 2nd random data' }, { priority: 4 }, false);
+    await queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5 }, false);
+    await queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
 
     // Check all jobs created
     const jobs = await queue.getJobs(true);
     jobs.length.should.equal(7);
 
-    queue.flushQueue(jobName);
+    await queue.flushQueue(jobName);
 
     // Remaining 3 jobs should be of type 'a-different-job'
     const remainingJobs = await queue.getJobs(true);
@@ -1562,19 +1562,19 @@ describe('Models/Queue', function() {
     });
 
     // Create a couple jobs
-    queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
-    queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 2nd random data' }, { priority: 4 }, false);
-    queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5 }, false);
-    queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
-    queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
-    queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, jobOptions, false);
+    await queue.createJob('a-different-job', { dummy: '1 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 2nd random data' }, { priority: 4 }, false);
+    await queue.createJob('a-different-job', { dummy: '2 data' }, { priority: 5 }, false);
+    await queue.createJob('a-different-job', { dummy: '3 data' }, { priority: 3 }, false);
+    await queue.createJob(jobName, { random: 'this is 3rd random data' }, jobOptions, false);
+    await queue.createJob(jobName, { random: 'this is 4th random data' }, jobOptions, false);
 
     // Check all jobs created
     const jobs = await queue.getJobs(true);
     jobs.length.should.equal(7);
 
-    queue.flushQueue();
+    await queue.flushQueue();
 
     // All jobs should be deleted.
     const remainingJobs = await queue.getJobs(true);
@@ -1592,7 +1592,7 @@ describe('Models/Queue', function() {
       hasDeleteBeenCalled = true; // Switch flag if function gets called.
     };
 
-    queue.flushQueue('no-jobs-exist-for-this-job-name');
+    await queue.flushQueue('no-jobs-exist-for-this-job-name');
 
     hasDeleteBeenCalled.should.be.False();
 
@@ -1614,7 +1614,7 @@ describe('Models/Queue', function() {
     }
 
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
     const jobName = 'job-name';
     let jobProcessed = false;
     let testFailed = false;
@@ -1643,7 +1643,7 @@ describe('Models/Queue', function() {
     });
 
     // Create a job
-    queue.createJob(jobName, { random: 'this is 1st random data' }, {}, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, {}, false);
 
     jobProcessed.should.equal(false);
     testFailed.should.equal(false);
@@ -1665,7 +1665,7 @@ describe('Models/Queue', function() {
     }
 
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
     const jobName = 'job-name';
     let jobProcessed = false;
     let testFailed = false;
@@ -1708,7 +1708,7 @@ describe('Models/Queue', function() {
     });
 
     // Create a job
-    queue.createJob(jobName, { random: 'this is 1st random data' }, {}, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, {}, false);
 
     jobProcessed.should.equal(false);
     testFailed.should.equal(false);
@@ -1734,7 +1734,7 @@ describe('Models/Queue', function() {
     }
 
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
     const jobName = 'job-name';
     let jobProcessStarted = false;
     let testFailed = false;
@@ -1771,7 +1771,7 @@ describe('Models/Queue', function() {
     });
 
     // Create a job
-    queue.createJob(jobName, { random: 'this is 1st random data' }, {}, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, {}, false);
 
     jobProcessStarted.should.equal(false);
     testFailed.should.equal(false);
@@ -1793,7 +1793,7 @@ describe('Models/Queue', function() {
     }
 
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
     const jobName = 'job-name';
     let jobAttemptCounter = 0;
     let onFailureFiredCounter = 0;
@@ -1826,7 +1826,7 @@ describe('Models/Queue', function() {
     const attempts = 3;
 
     // Create a job
-    queue.createJob(jobName, { random: 'this is 1st random data' }, {
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, {
       attempts
     }, false);
 
@@ -1850,7 +1850,7 @@ describe('Models/Queue', function() {
     }
 
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
     const jobName = 'job-name';
     let jobAttemptCounter = 0;
     let onFailureFiredCounter = 0;
@@ -1903,7 +1903,7 @@ describe('Models/Queue', function() {
     });
 
     // Create a job
-    queue.createJob(jobName, { random: 'this is 1st random data succes' }, {
+    await queue.createJob(jobName, { random: 'this is 1st random data succes' }, {
       attempts
     }, false);
 
@@ -1928,7 +1928,7 @@ describe('Models/Queue', function() {
     }
 
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
     const jobName = 'job-name';
     let jobAttemptCounter = 0;
     let onFailureFiredCounter = 0;
@@ -1967,7 +1967,7 @@ describe('Models/Queue', function() {
     });
 
     // Create a job
-    queue.createJob(jobName, { random: 'this is 1st random data' }, {
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, {
       attempts
     }, false);
 
@@ -1992,7 +1992,7 @@ describe('Models/Queue', function() {
     }
 
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
     const jobName = 'job-name';
     let workTracker = [];
     let tracker = [];
@@ -2044,11 +2044,11 @@ describe('Models/Queue', function() {
     });
 
     // Create a job
-    queue.createJob(jobName, { random: 'this is 1st random data' }, {}, false);
-    queue.createJob(jobName, { random: 'this is 2nd random data' }, {}, false);
-    queue.createJob(jobName, { random: 'this is 3rd random data' }, {}, false);
-    queue.createJob(jobName, { random: 'this is 4th random data' }, {}, false);
-    queue.createJob(jobName, { random: 'this is 5th random data' }, {}, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, {}, false);
+    await queue.createJob(jobName, { random: 'this is 2nd random data' }, {}, false);
+    await queue.createJob(jobName, { random: 'this is 3rd random data' }, {}, false);
+    await queue.createJob(jobName, { random: 'this is 4th random data' }, {}, false);
+    await queue.createJob(jobName, { random: 'this is 5th random data' }, {}, false);
 
     await queue.start();
 
@@ -2087,7 +2087,7 @@ describe('Models/Queue', function() {
     }
 
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
     const jobName = 'job-name';
     let workTracker = [];
     let tracker = [];
@@ -2129,11 +2129,11 @@ describe('Models/Queue', function() {
     });
 
     // Create a job
-    queue.createJob(jobName, { random: 'this is 1st random data' }, {}, false);
-    queue.createJob(jobName, { random: 'this is 2nd random data' }, {}, false);
-    queue.createJob(jobName, { random: 'this is 3rd random data' }, {}, false);
-    queue.createJob(jobName, { random: 'this is 4th random data' }, {}, false);
-    queue.createJob(jobName, { random: 'this is 5th random data' }, {}, false);
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, {}, false);
+    await queue.createJob(jobName, { random: 'this is 2nd random data' }, {}, false);
+    await queue.createJob(jobName, { random: 'this is 3rd random data' }, {}, false);
+    await queue.createJob(jobName, { random: 'this is 4th random data' }, {}, false);
+    await queue.createJob(jobName, { random: 'this is 5th random data' }, {}, false);
 
     await queue.start();
 
@@ -2170,14 +2170,14 @@ describe('Models/Queue', function() {
   it('does not override an explicitly set job timeout value of 0 with the default value of 25000.', async () => {
 
     const queue = await QueueFactory();
-    queue.flushQueue();
+    await queue.flushQueue();
     const jobName = 'job-name';
 
     // Attach the worker.
     queue.addWorker(jobName, async () => {});
 
     // Create a job
-    queue.createJob(jobName, { random: 'this is 1st random data' }, {
+    await queue.createJob(jobName, { random: 'this is 1st random data' }, {
       timeout: 0
     }, false);
 
@@ -2187,7 +2187,7 @@ describe('Models/Queue', function() {
     job.timeout.should.equal(0);
 
     // Flush jobs
-    queue.flushQueue();
+    await queue.flushQueue();
 
   });
 

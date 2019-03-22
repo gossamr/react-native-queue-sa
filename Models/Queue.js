@@ -8,8 +8,8 @@ import uuid from 'react-native-uuid';
 import promiseReflect from 'promise-reflect';
 import _ from 'lodash';
 
-import JobDatabase from '../config/Database';
 import Worker from './Worker';
+import TxnAsyncStorage from '../config/TxnAsyncStorage';
 
 
 export class Queue {
@@ -36,7 +36,7 @@ export class Queue {
    */
   init = async () => {
     if (this.jobDB === null) {
-      this.jobDB = new JobDatabase();
+      this.jobDB = new TxnAsyncStorage();
       await this.jobDB.init();
     }
   }
@@ -85,7 +85,7 @@ export class Queue {
    * @param options {object} - Job related options like timeout etc. See README.md for job options info.
    * @param startQueue - {boolean} - Whether or not to immediately begin prcessing queue. If false queue.start() must be manually called.
    */
-  createJob(name, payload = {}, options = {}, startQueue = true) {
+  async createJob(name, payload = {}, options = {}, startQueue = true) {
 
     if (!name) {
       throw new Error('Job name must be supplied.');
@@ -98,18 +98,18 @@ export class Queue {
 
     // here we reset `failed` prop
     if (this.executeFailedJobsOnStart) {
-      const jobs = this.jobDB.objects();
+      const jobs = await this.jobDB.objects();
 
       for (let i = 0; i < jobs.length; i += 1) {
         jobs[i].failed = null;
       }
 
-      this.jobDB.saveAll(jobs);
+      await this.jobDB.saveAll(jobs);
 
       this.executeFailedJobsOnStart = false;
     }
 
-    this.jobDB.create({
+    await this.jobDB.create({
       id: uuid.v4(),
       name,
       payload: JSON.stringify(payload),
@@ -249,7 +249,7 @@ export class Queue {
     // If queueLife
     const timeoutUpperBound = (queueLifespanRemaining - 500 > 0) ? queueLifespanRemaining - 499 : 0; // Only get jobs with timeout at least 500ms < queueLifespanRemaining.
 
-    let jobs = this.jobDB.objects();
+    let jobs = await this.jobDB.objects();
     jobs = (queueLifespanRemaining)
       ? jobs.filter(j => (!j.active && j.failed === null && j.timeout > 0 && j.timeout < timeoutUpperBound))
       : jobs.filter(j => (!j.active && j.failed === null));
@@ -264,7 +264,7 @@ export class Queue {
 
       const concurrency = this.worker.getConcurrency(nextJob.name);
 
-      let allRelatedJobs = this.jobDB.objects();
+      let allRelatedJobs = await this.jobDB.objects();
       allRelatedJobs = (queueLifespanRemaining) 
         ? allRelatedJobs.filter(j => (j.name === nextJob.name && !j.active && j.failed === null && j.timeout > 0 && j.timeout < timeoutUpperBound))
         : allRelatedJobs.filter(j => (j.name === nextJob.name && !j.active && j.failed === null));
@@ -278,12 +278,14 @@ export class Queue {
       const concurrentJobIds = jobsToMarkActive.map( job => job.id);
 
       // Mark concurrent jobs as active
-      jobsToMarkActive = jobsToMarkActive.map( job => {
+      jobsToMarkActive.forEach( job => {
         job.active = true;
       });
 
+      await this.jobDB.saveAll(jobsToMarkActive);
+
       // Reselect now-active concurrent jobs by id.
-      let reselectedJobs = this.jobDB.objects();
+      let reselectedJobs = await this.jobDB.objects();
       reselectedJobs = reselectedJobs.filter(rj => _.includes(concurrentJobIds, rj.id));
       reselectedJobs = _.orderBy(reselectedJobs, ['priority', 'created'], ['desc', 'asc']);
 
@@ -327,7 +329,7 @@ export class Queue {
       await this.worker.executeJob(job);
 
       // On successful job completion, remove job
-      this.jobDB.delete(job);
+      await this.jobDB.delete(job);
 
       // Job has processed successfully, fire onSuccess and onComplete job lifecycle callbacks.
       this.worker.executeJobLifecycleCallback('onSuccess', jobName, jobId, jobPayload);
@@ -362,7 +364,7 @@ export class Queue {
         job.failed = new Date();
       }
 
-      this.jobDB.save(job);
+      await this.jobDB.save(job);
 
       // Execute job onFailure lifecycle callback.
       this.worker.executeJobLifecycleCallback('onFailure', jobName, jobId, jobPayload);
@@ -390,15 +392,15 @@ export class Queue {
 
     if (jobName) {
 
-      let jobs = this.jobDB.objects();
+      let jobs = await this.jobDB.objects();
       jobs = jobs.filter(j => j.name === jobName);
 
       if (jobs.length) {
-        this.jobDB.delete(jobs);
+        return this.jobDB.delete(jobs);
       }
 
     } else {
-      this.jobDB.deleteAll();
+      return this.jobDB.deleteAll();
     }
 
   }
