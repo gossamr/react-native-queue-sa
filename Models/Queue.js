@@ -17,7 +17,7 @@ export class Queue {
    * Set initial class properties.
    *
    * @constructor
-   *
+   * @param storageFactory {()=>Storage} - Factory method returning the storage to be used (defaults to RealmStorage)
    * @param executeFailedJobsOnStart {boolean} - Indicates if previously failed jobs will be executed on start (actually when created new job).
    */
   constructor(storageFactory = () => new RealmStorage(), executeFailedJobsOnStart = false) {
@@ -358,6 +358,7 @@ export class Queue {
  *
  * Factory should be used to create a new queue instance.
  *
+ * @param storageFactory {()=>Storage} - Factory method returning the storage to be used (defaults to RealmStorage)
  * @param executeFailedJobsOnStart {boolean} - Indicates if previously failed jobs will be executed on start (actually when created new job).
  *
  * @return {Queue} - A queue instance.

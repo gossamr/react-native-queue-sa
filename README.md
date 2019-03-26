@@ -11,25 +11,46 @@
 
 A React Native at-least-once priority job queue / task queue backed by persistent Realm storage. Jobs will persist until completed, even if user closes and re-opens app. React Native Queue is easily integrated into OS background processes (services) so you can ensure the queue will continue to process until all jobs are completed even if app isn't in focus. It also plays well with Workers so your jobs can be thrown on the queue, then processed in dedicated worker threads for greatly improved processing performance.
 
-**This repository (fork from [react-native-queue](https://github.com/billmalarky/react-native-queue)) uses React Native `AsyncStorage` because there were several [problems](https://github.com/realm/realm-js/issues/2185) with launching the app while trying to `react-native link realm` and I have decided to rewrite it with `AsyncStorage` so there is no any third-party DB dependencies.**
+**This version merges the two implementations of storage of its parent repositories: RealmStorage (original) and CachedAsyncStorage (AsyncStorage provided).**
 
-**If you would like to use `realm`, please use [original repository](https://github.com/billmalarky/react-native-queue)!** 
 
-**Also I'd like to warn you that there might be issues with `AsyncStorage` implementation because initially the original repository was meant to use `realm` and is not heavily tested with `AsyncStorage`, so be careful. However it worked perfectly in my case 🙂🙃**
+**With this you can decide which implementation to use by providing a factory method the first parameter of `queueFactory()`. See documentation down below for more details.**
+
+## Fork motivation
+After struggling with Realm while debugging, I decided that this library would benefit from having a mechanism to switch the implementation of the storage.
+
+So that you can do something of the sort:
+
+```js
+const queue = await QueueFactory(
+  __DEV__?
+() => new DirectAsyncStorage():
+() => new RealmStorage(), false);
+```
 
 ## Table of Contents
 
-* [Features](#features)
-* [Example Use Cases](#example-use-cases)
-* [Installation](#installation)
-* [Basic Usage](#basic-usage)
-* [Options and Job Lifecycle Callbacks](#options-and-job-lifecycle-callbacks)
-* [Testing with Jest](#testing-with-jest)
-* [Caveats](#caveats)
-* [Advanced Usage Examples](#advanced-usage-examples)
-  * [Advanced Job Full Example](#advanced-job-full-example)
-  * [OS Background Task Full Example](#os-background-task-full-example)
-* [Tutorials](#tutorials)
+- [React Native Queue](#react-native-queue)
+      - [Simple. Powerful. Persistent.](#simple-powerful-persistent)
+  - [Fork motivation](#fork-motivation)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Example Use Cases](#example-use-cases)
+  - [Installation](#installation)
+  - [Basic Usage](#basic-usage)
+  - [Options and Job Lifecycle Callbacks](#options-and-job-lifecycle-callbacks)
+    - [Queue Options](#queue-options)
+      - [Storage types](#storage-types)
+      - [Execute failed jobs on start](#execute-failed-jobs-on-start)
+    - [Worker Options (includes async job lifecycle callbacks)](#worker-options-includes-async-job-lifecycle-callbacks)
+    - [Job Options](#job-options)
+  - [Testing with Jest](#testing-with-jest)
+  - [Caveats](#caveats)
+  - [Advanced Usage Examples](#advanced-usage-examples)
+      - [Advanced Job Full Example](#advanced-job-full-example)
+      - [OS Background Task Full Example](#os-background-task-full-example)
+  - [Tutorials](#tutorials)
+      - [Easy OS Background Tasks in React Native](#easy-os-background-tasks-in-react-native)
 
 ## Features
 
@@ -145,7 +166,40 @@ console.log('The above jobs are processing in the background of app now.');
 
 ## Options and Job Lifecycle Callbacks
 
-#### Worker Options (includes async job lifecycle callbacks)
+### Queue Options
+
+#### Storage types
+
+storage option of `queueFactory()`:
+
+1. `() => new RealmStorage()`;
+2. `() => new CachedAsyncStorage()`;
+3. `() => new DirectAsyncStorage()`.
+
+
+```js
+const queue = await QueueFactory(()=> new DirectAsyncStorage(), false);
+```
+
+**RealmStorage**: original storage of this library based on Realm.
+
+**CachedAsyncStorage**: storage based on AsyncStorage with an array backed storage that is stored periodically in the AsyncStorage. (provided by the fork)
+
+Note that this is not transactional.
+
+**DirectAsyncStorage**: new storage solution from this fork. It is also based on AsyncStorage but it stores each job as a value in the AsyncStorage and guarantees that every query on it comes from the AsyncStorage and that no job is going to be because of transactional issue.
+
+This version is not guaranteed to be transactional either but it does eliminate the most common problems by storing each job in its storage value.
+
+The recommended settings is to use Realm for production and one of the AsyncStorage for testing purpose.
+
+#### Execute failed jobs on start
+
+The second parameter `executeFailedJobsOnStart` is false by default.
+
+It indicates in the next job creation should reset the failed jobs to try them again.
+
+### Worker Options (includes async job lifecycle callbacks)
 
 queue.addWorker() accepts an options object in order to tweak standard functionality and allow you to hook into asynchronous job lifecycle callbacks.
 
@@ -205,7 +259,7 @@ queue.addWorker('job-name-here', async (id, payload) => { console.log(id); }, {
 
 ```
 
-#### Job Options
+### Job Options
 
 queue.createJob() accepts an options object in order to tweak standard functionality.
 
@@ -590,4 +644,3 @@ An in-depth guide to setting up background tasks / services that run periodicall
 
 * [Hosted on Medium](https://hackernoon.com/easy-os-background-tasks-in-react-native-bc4476c48b8a)
 * [Raw Markdown](/docs/easy-os-background-tasks-in-react-native.md)
-
