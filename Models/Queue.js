@@ -8,7 +8,7 @@ import uuid from 'react-native-uuid';
 import promiseReflect from 'promise-reflect';
 
 import Worker from './Worker';
-import RealmStorage from '../config/RealmStorage';
+import RealmStorage from './RealmStorage';
 
 export class Queue {
 

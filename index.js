@@ -8,3 +8,4 @@
 import QueueFactory from './Models/Queue';
 
 export default QueueFactory;
+export * from './Models';

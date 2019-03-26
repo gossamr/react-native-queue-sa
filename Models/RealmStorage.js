@@ -2,7 +2,7 @@
  * Realm database bootstrap
  */
 
-import { Config } from './config';
+import { Config } from '../config/config';
 import Realm from 'realm';
 
 const JobSchema = {

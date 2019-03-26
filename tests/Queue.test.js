@@ -7,9 +7,9 @@ import should from 'should'; // eslint-disable-line no-unused-vars
 import QueueFactory, { Queue } from '../Models/Queue';
 import Worker from '../Models/Worker';
 import MockAsyncStorage from 'mock-async-storage';
-import RealmStorage from '../config/RealmStorage';
-import DirectAsyncStorage from '../config/DirectAsyncStorage';
-import CachedAsyncStorage from '../config/CachedAsyncStorage';
+import RealmStorage from '../Models/RealmStorage';
+import DirectAsyncStorage from '../Models/DirectAsyncStorage';
+import CachedAsyncStorage from '../Models/CachedAsyncStorage';
 
 
 const mock = () => {

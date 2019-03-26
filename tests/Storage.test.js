@@ -1,6 +1,6 @@
 /* global describe it beforeEach process jest expect*/
 
-import storage from '../config/Storage';
+import storage from '../Models/Storage';
 
 beforeEach(async () => {
   storage.deleteAll();
