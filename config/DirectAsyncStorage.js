@@ -1,11 +1,11 @@
+import _ from 'lodash';
+import storage from './Storage';
 
 /**
  * DB Implementation that stores the jobs by id.
  * 
  * Appropriate for producer/consumer pattern with one of each.
  */
-
-import storage from './Storage';
 
 /*
 
@@ -33,10 +33,10 @@ JobSchema = {
 
 const JOB_PREFIX = '@queue:Job-';
 
-export default class TxnAsyncStorage {
-  init = async () => {
+export default class DirectAsyncStorage {
+  async init(){
     // Nothing to be done
-  };
+  }
 
   _getKey(job) {
     return JOB_PREFIX + job.id;
@@ -71,5 +71,46 @@ export default class TxnAsyncStorage {
   async deleteAll() {
     let keys = await storage.getKeys(JOB_PREFIX);
     return storage.delete(keys);
+  }
+
+  async merge(job, fields){
+    Object.assign(job, fields);
+    return this.save(job);
+  }
+
+  /* Queries */
+  async findNextJobs(timeoutUpperBound){
+    let jobs = await this.objects();
+    jobs = (timeoutUpperBound !== undefined)
+      ? jobs.filter(j => (!j.active && j.failed === null && j.timeout > 0 && j.timeout < timeoutUpperBound))
+      : jobs.filter(j => (!j.active && j.failed === null));
+    jobs = _.orderBy(jobs, ['priority', 'created'], ['desc', 'asc']);
+    return jobs;
+  }
+
+  async markActive(jobs){
+    // Mark concurrent jobs as active
+    jobs.forEach( job => {
+      job.active = true;
+    });
+
+    return this.saveAll(jobs);
+  }
+
+  async deleteByName(jobName){
+    let jobs = await this.objects();
+    jobs = jobs.filter(j => j.name === jobName);
+
+    if (jobs.length) {
+      return this.delete(jobs);
+    }
+  }
+
+  async resetFailedJobs(){
+    const jobs = await this.objects();
+
+    jobs.forEach(job => job.failed = null);
+
+    return this.saveAll(jobs);
   }
 }

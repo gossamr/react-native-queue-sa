@@ -1,9 +1,9 @@
+import _ from 'lodash';
+import storage from './Storage';
+
 /**
  * DB imitation based on array with help of RN AsyncStorage
  */
-
-import storage from './Storage';
-
 
 /*
 
@@ -34,24 +34,24 @@ const Job = '@queue:Job';
 
 export default class CachedAsyncStorage {
 
-  init = async () => {
+  async init(){
     // await storage.delete(Job); // to delete all jobs
     await this._restore();
     await this._backup();
   }
 
-  _restore = async () => {
+  async _restore(){
     const jobDB = await storage.get(Job);
     this.db = jobDB || [];
   }
 
-  _backup = async () => {
+  async _backup(){
     await storage.save(Job, this.db.slice());
 
     setTimeout(await this._backup, BACKUP_TIME);
   }
 
-  create = (obj) => {
+  create(obj){
     let shouldSkip = false; // if obj.id is already in array
 
     for (let i = 0; i < this.db.length; i += 1) {
@@ -59,31 +59,74 @@ export default class CachedAsyncStorage {
     }
 
     if (!shouldSkip) this.db.push(obj);
-  };
+  }
 
-  objects = () => this.db.slice();
+  objects(){
+    return this.db.slice();
+  }
 
-  save = (obj) => {
+  save(obj){
     for (let i = 0; i < this.db.length; i += 1) {
       if (this.db[i] === obj.id) this.db[i] = obj;
     }
   }
 
-  saveAll = (objs) => {
-    this.db = objs;
+  saveAll(objs){
+    objs.forEach(o => this.save(o));
   }
 
-  delete = (obj) => {
+  delete(obj){
     if(!Array.isArray(obj)) {
       this.db = this.db.filter((el)=> el.id !== obj.id);
     }else{
       let ids = obj.map(a => a.id);
       this.db = this.db.filter((el)=> ids.indexOf(el.id)===-1);
     }
-  };
+  }
 
-  deleteAll = () => {
+  deleteAll(){
     this.db = [];
-  };
+  }
+
+  async merge(job, fields){
+    Object.assign(job, fields);
+    return this.save(job);
+  }
+
+  /* Queries */
+  async findNextJobs(timeoutUpperBound){
+    let jobs = await this.objects();
+    jobs = (timeoutUpperBound !== undefined)
+      ? jobs.filter(j => (!j.active && j.failed === null && j.timeout > 0 && j.timeout < timeoutUpperBound))
+      : jobs.filter(j => (!j.active && j.failed === null));
+    jobs = _.orderBy(jobs, ['priority', 'created'], ['desc', 'asc']);
+    return jobs;
+  }
+
+  async markActive(jobs){
+    // Mark concurrent jobs as active
+    jobs.forEach( job => {
+      job.active = true;
+    });
+
+    return this.saveAll(jobs);
+  }
+
+  async deleteByName(jobName){
+    let jobs = await this.objects();
+    jobs = jobs.filter(j => j.name === jobName);
+
+    if (jobs.length) {
+      return this.delete(jobs);
+    }
+  }
+
+  async resetFailedJobs(){
+    const jobs = await this.objects();
+
+    jobs.forEach(job => job.failed = null);
+
+    return this.saveAll(jobs);
+  }
 
 }

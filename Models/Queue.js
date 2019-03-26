@@ -6,11 +6,9 @@
 
 import uuid from 'react-native-uuid';
 import promiseReflect from 'promise-reflect';
-import _ from 'lodash';
 
 import Worker from './Worker';
-import TxnAsyncStorage from '../config/TxnAsyncStorage';
-
+import RealmStorage from '../config/RealmStorage';
 
 export class Queue {
 
@@ -22,7 +20,8 @@ export class Queue {
    *
    * @param executeFailedJobsOnStart {boolean} - Indicates if previously failed jobs will be executed on start (actually when created new job).
    */
-  constructor(executeFailedJobsOnStart = false) {
+  constructor(storageFactory = () => new RealmStorage(), executeFailedJobsOnStart = false) {
+    this.storageFactory = storageFactory;
     this.jobDB = null;
     this.worker = new Worker();
     this.status = 'inactive';
@@ -36,7 +35,7 @@ export class Queue {
    */
   init = async () => {
     if (this.jobDB === null) {
-      this.jobDB = new TxnAsyncStorage();
+      this.jobDB = this.storageFactory();
       await this.jobDB.init();
     }
   }
@@ -98,13 +97,7 @@ export class Queue {
 
     // here we reset `failed` prop
     if (this.executeFailedJobsOnStart) {
-      const jobs = await this.jobDB.objects();
-
-      for (let i = 0; i < jobs.length; i += 1) {
-        jobs[i].failed = null;
-      }
-
-      await this.jobDB.saveAll(jobs);
+      this.jobDB.resetFailedJobs();
 
       this.executeFailedJobsOnStart = false;
     }
@@ -153,7 +146,7 @@ export class Queue {
    * @param lifespan {number} - If lifespan is passed, the queue will start up and run for lifespan ms, then queue will be stopped.
    * @return {boolean|undefined} - False if queue is already started. Otherwise nothing is returned when queue finishes processing.
    */
-  async start(lifespan = 0) {
+  async start(lifespan) {
 
     // If queue is already running, don't fire up concurrent loop.
     if (this.status == 'active') {
@@ -167,15 +160,15 @@ export class Queue {
     let lifespanRemaining = null;
     let concurrentJobs = [];
 
-    if (lifespan !== 0) {
-      lifespanRemaining = lifespan - (Date.now() - startTime);
-      lifespanRemaining = (lifespanRemaining === 0) ? -1 : lifespanRemaining; // Handle exactly zero lifespan remaining edge case.
-      concurrentJobs = await this.getConcurrentJobs(lifespanRemaining);
-    } else {
-      concurrentJobs = await this.getConcurrentJobs();
-    }
+   
 
-    while (this.status === 'active' && concurrentJobs.length) {
+    do{
+      if (lifespan !== undefined) {
+        lifespanRemaining = lifespan - (Date.now() - startTime);
+        concurrentJobs = await this.getConcurrentJobs(lifespanRemaining);
+      } else {
+        concurrentJobs = await this.getConcurrentJobs();
+      }
 
       // Loop over jobs and process them concurrently.
       const processingJobs = concurrentJobs.map( job => {
@@ -186,16 +179,7 @@ export class Queue {
       // we don't break await early if one of the jobs fails.
       await Promise.all(processingJobs.map(promiseReflect));
 
-      // Get next batch of jobs.
-      if (lifespan !== 0) {
-        lifespanRemaining = lifespan - (Date.now() - startTime);
-        lifespanRemaining = (lifespanRemaining === 0) ? -1 : lifespanRemaining; // Handle exactly zero lifespan remaining edge case.
-        concurrentJobs = await this.getConcurrentJobs(lifespanRemaining);
-      } else {
-        concurrentJobs = await this.getConcurrentJobs();
-      }
-
-    }
+    } while (this.status === 'active' && concurrentJobs.length);
 
     this.status = 'inactive';
 
@@ -220,8 +204,8 @@ export class Queue {
    * @param sync {boolean} - This should be true if you want to guarantee job data is fresh. Otherwise you could receive job data that is not up to date if a write transaction is occuring concurrently.
    * @return {promise} - Promise that resolves to a collection of all the jobs in the queue.
    */
-  async getJobs() {
-    return this.jobDB.objects();
+  async getJobs(sync = true) {
+    return this.jobDB.objects(sync);
   }
 
   /**
@@ -238,63 +222,34 @@ export class Queue {
    * @param queueLifespanRemaining {number} - The remaining lifespan of the current queue process (defaults to indefinite).
    * @return {promise} - Promise resolves to an array of job(s) to be processed next by the queue.
    */
-  async getConcurrentJobs(queueLifespanRemaining = 0) {
-
-    let concurrentJobs = [];
-
+  async getConcurrentJobs(queueLifespanRemaining) {
     // Get next job from queue.
     let nextJob = null;
 
-    // Build query string
-    // If queueLife
-    const timeoutUpperBound = (queueLifespanRemaining - 500 > 0) ? queueLifespanRemaining - 499 : 0; // Only get jobs with timeout at least 500ms < queueLifespanRemaining.
-
-    let jobs = await this.jobDB.objects();
-    jobs = (queueLifespanRemaining)
-      ? jobs.filter(j => (!j.active && j.failed === null && j.timeout > 0 && j.timeout < timeoutUpperBound))
-      : jobs.filter(j => (!j.active && j.failed === null));
-    jobs = _.orderBy(jobs, ['priority', 'created'], ['desc', 'asc']);
+    
+    let timeoutUpperBound = undefined;
+    let jobs;
+    if(queueLifespanRemaining !== undefined){
+      timeoutUpperBound = queueLifespanRemaining - 499; // Only get jobs with timeout at least 500ms < queueLifespanRemaining.
+    }
+    jobs = await this.jobDB.findNextJobs(timeoutUpperBound);
 
     if (jobs.length) {
       nextJob = jobs[0];
     }
 
     // If next job exists, get concurrent related jobs appropriately.
-    if (nextJob) {
+    if (!nextJob) 
+      return [];
+    const concurrency = this.worker.getConcurrency(nextJob.name);
 
-      const concurrency = this.worker.getConcurrency(nextJob.name);
+    let allRelatedJobs = jobs.filter(j => j.name === nextJob.name);
 
-      let allRelatedJobs = await this.jobDB.objects();
-      allRelatedJobs = (queueLifespanRemaining) 
-        ? allRelatedJobs.filter(j => (j.name === nextJob.name && !j.active && j.failed === null && j.timeout > 0 && j.timeout < timeoutUpperBound))
-        : allRelatedJobs.filter(j => (j.name === nextJob.name && !j.active && j.failed === null));
-      allRelatedJobs = _.orderBy(allRelatedJobs, ['priority', 'created'], ['desc', 'asc']);
+    let concurrentJobs = allRelatedJobs.slice(0, concurrency);
 
-      let jobsToMarkActive = allRelatedJobs.slice(0, concurrency);
-
-      // Grab concurrent job ids to reselect jobs as marking these jobs as active will remove
-      // them from initial selection when write transaction exits.
-      // See: https://stackoverflow.com/questions/47359368/does-realm-support-select-for-update-style-read-locking/47363356#comment81772710_47363356
-      const concurrentJobIds = jobsToMarkActive.map( job => job.id);
-
-      // Mark concurrent jobs as active
-      jobsToMarkActive.forEach( job => {
-        job.active = true;
-      });
-
-      await this.jobDB.saveAll(jobsToMarkActive);
-
-      // Reselect now-active concurrent jobs by id.
-      let reselectedJobs = await this.jobDB.objects();
-      reselectedJobs = reselectedJobs.filter(rj => _.includes(concurrentJobIds, rj.id));
-      reselectedJobs = _.orderBy(reselectedJobs, ['priority', 'created'], ['desc', 'asc']);
-
-      concurrentJobs = reselectedJobs.slice(0, concurrency);
-
-    }
+    this.jobDB.markActive(concurrentJobs);
 
     return concurrentJobs;
-
   }
 
   /**
@@ -354,17 +309,18 @@ export class Queue {
         jobData.errors.push(error.message);
       }
 
-      job.data = JSON.stringify(jobData);
+      let jobMerge = {};
+      jobMerge.data = JSON.stringify(jobData);
 
       // Reset active status
-      job.active = false;
+      jobMerge.active = false;
 
       // Mark job as failed if too many attempts
       if (jobData.failedAttempts >= jobData.attempts) {
-        job.failed = new Date();
+        jobMerge.failed = new Date();
       }
 
-      await this.jobDB.save(job);
+      await this.jobDB.merge(job, jobMerge);
 
       // Execute job onFailure lifecycle callback.
       this.worker.executeJobLifecycleCallback('onFailure', jobName, jobId, jobPayload);
@@ -389,20 +345,11 @@ export class Queue {
    * @param jobName {string} - Name associated with job (and related job worker).
    */
   async flushQueue(jobName = null) {
-
     if (jobName) {
-
-      let jobs = await this.jobDB.objects();
-      jobs = jobs.filter(j => j.name === jobName);
-
-      if (jobs.length) {
-        return this.jobDB.delete(jobs);
-      }
-
+      return this.jobDB.deleteByName(jobName);
     } else {
       return this.jobDB.deleteAll();
     }
-
   }
 
 }
@@ -415,9 +362,10 @@ export class Queue {
  *
  * @return {Queue} - A queue instance.
  */
-export default async function queueFactory(executeFailedJobsOnStart = false) {
+export default async function queueFactory(storageFactory = () => new RealmStorage(), executeFailedJobsOnStart = false) {
+  
 
-  const queue = new Queue(executeFailedJobsOnStart);
+  const queue = new Queue(storageFactory, executeFailedJobsOnStart);
   await queue.init();
 
   return queue;
