@@ -11,8 +11,9 @@
 
 A React Native at-least-once priority job queue / task queue backed by persistent Realm storage. Jobs will persist until completed, even if user closes and re-opens app. React Native Queue is easily integrated into OS background processes (services) so you can ensure the queue will continue to process until all jobs are completed even if app isn't in focus. It also plays well with Workers so your jobs can be thrown on the queue, then processed in dedicated worker threads for greatly improved processing performance.
 
-**This version merges the two implementations of storage of its parent repositories: RealmStorage (original) and CachedAsyncStorage (AsyncStorage provided).**
+**This version merges the two implementations of storage of its parent repositories: RealmStorage (original) and CachedAsyncStorage (EncryptedStorage provided).**
 
+**This fork swaps out AsyncStorage for EncryptedStorage. Model names are otherwise unchanged.**
 
 **With this you can decide which implementation to use by providing a factory method the first parameter of `queueFactory()`. See documentation down below for more details.**
 
@@ -56,7 +57,7 @@ const queue = await QueueFactory(
 
 * **Simple API:** Set up job workers and begin creating your jobs in minutes with just two basic API calls
   * queue.addWorker(name, workerFunction, options = {})  
-  * queue.createJob(name, payload = {}, options = {}, startQueue = true) 
+  * queue.createJob(name, payload = {}, options = {}, startQueue = true)
 * **Powerful options:** Easily modify default functionality. Set job timeouts, number of retry attempts, priority, job lifecycle callbacks, and worker concurrency with an options object. Start queue processing with a lifespan to easily meet OS background task time limits.
 * **Persistent Jobs:** Jobs are persisted with Realm. Because jobs persist, you can easily continue to process jobs across app restarts or in OS background tasks until completed or failed (or app is uninstalled).
 * **Powerful Integrations:** React Native Queue was designed to play well with others. The queue quickly integrates with a variety of OS background task and Worker packages so  processing your jobs in a background service or dedicated thread have never been easier.
@@ -96,7 +97,7 @@ $ yarn add https://github.com/inkitt/react-native-queue-asyncstorage
 React Native Queue is a standard job/task queue built specifically for react native applications. If you have a long-running task, or a large number of tasks, consider turning that task into a job(s) and throwing it/them onto the queue to be processed in the background instead of blocking your UI until task(s) complete.
 
 Creating and processing jobs consists of:
- 
+
 1. Importing and initializing React Native Queue
 2. Registering worker functions (the functions that execute your jobs).
 3. Creating jobs.
@@ -106,7 +107,7 @@ Creating and processing jobs consists of:
 
 import queueFactory from 'react-native-queue';
 
-// Of course this line needs to be in the context of an async function, 
+// Of course this line needs to be in the context of an async function,
 // otherwise use queueFactory.then((queue) => { console.log('add workers and jobs here'); });
 const queue = await queueFactory();
 
@@ -114,7 +115,7 @@ const queue = await queueFactory();
 queue.addWorker('example-job', async (id, payload) => {
   console.log('EXECUTING "example-job" with id: ' + id);
   console.log(payload, 'payload');
-  
+
   await new Promise((resolve) => {
     setTimeout(() => {
       console.log('"example-job" has completed!');
@@ -128,7 +129,7 @@ queue.addWorker('example-job', async (id, payload) => {
 
 // Example job passes a payload of data to 'example-job' worker.
 // Default settings are used (note the empty options object).
-// Because false is passed, the queue won't automatically start when this job is created, so usually queue.start() 
+// Because false is passed, the queue won't automatically start when this job is created, so usually queue.start()
 // would have to be manually called. However in the final createJob() below we don't pass false so it will start the queue.
 // NOTE: We pass false for example purposes. In most scenarios starting queue on createJob() is perfectly fine.
 queue.createJob('example-job', {
@@ -208,54 +209,54 @@ queue.addWorker() accepts an options object in order to tweak standard functiona
 ```js
 
 queue.addWorker('job-name-here', async (id, payload) => { console.log(id); }, {
-  
+
   // Set max number of jobs for this worker to process concurrently.
   // Defaults to 1.
   concurrency: 5,
-  
+
   // JOB LIFECYCLE CALLBACKS
-  
+
   // onStart job callback handler is fired when a job begins processing.
   //
-  // IMPORTANT: Job lifecycle callbacks are executed asynchronously and do not block job processing 
+  // IMPORTANT: Job lifecycle callbacks are executed asynchronously and do not block job processing
   // (even if the callback returns a promise it will not be "awaited" on).
   // As such, do not place any logic in onStart that your actual job worker function will depend on,
   // this type of logic should of course go inside the job worker function itself.
   onStart: async (id, payload) => {
-    
+
     console.log('Job "job-name-here" with id ' + id + ' has started processing.');  
-    
+
   },
-  
+
   // onSuccess job callback handler is fired after a job successfully completes processing.
   onSuccess: async (id, payload) => {
-    
+
     console.log('Job "job-name-here" with id ' + id + ' was successful.');
-    
+
   },
-  
+
   // onFailure job callback handler is fired after each time a job fails (onFailed also fires if job has reached max number of attempts).
   onFailure: async (id, payload) => {
-    
+
     console.log('Job "job-name-here" with id ' + id + ' had an attempt end in failure.');
-    
+
   },
-  
+
   // onFailed job callback handler is fired if job fails enough times to reach max number of attempts.
   onFailed: async (id, payload) => {
-    
+
     console.log('Job "job-name-here" with id ' + id + ' has failed.');
-    
+
   },
-  
+
   // onComplete job callback handler fires after job has completed processing successfully or failed entirely.
   onComplete: async (id, payload) => {
-    
+
     console.log('Job "job-name-here" with id ' + id + ' has completed processing.');
-    
+
   }
-  
-}); 
+
+});
 
 ```
 
@@ -266,18 +267,18 @@ queue.createJob() accepts an options object in order to tweak standard functiona
 ```js
 
 queue.createJob('job-name-here', {foo: 'bar'}, {
-  
+
   // Higher priority jobs (10) get processed before lower priority jobs (-10).
   // Any int will work, priority 1000 will be processed before priority 10, though this is probably overkill.
   // Defaults to 0.
   priority: 10, // High priority
-  
+
   // Timeout in ms before job is considered failed.
   // Use this setting to kill off hanging jobs that are clogging up
   // your queue, or ensure your jobs finish in a timely manner if you want
   // to execute jobs in OS background tasks.
   //
-  // IMPORTANT: Jobs are required to have a timeout > 0 set in order to be processed 
+  // IMPORTANT: Jobs are required to have a timeout > 0 set in order to be processed
   // by a queue that has been started with a lifespan. As such, if you want to process
   // jobs in an OS background task, you MUST give the jobs a timeout setting.
   //
@@ -285,12 +286,12 @@ queue.createJob('job-name-here', {foo: 'bar'}, {
   //
   // Defaults to 25000.
   timeout: 30000, // Timeout in 30 seconds
-  
+
   // Number of times to attempt a failing job before marking job as failed and moving on.
   // Defaults to 1.
   attempts: 4, // If this job fails to process 4 times in a row, it will be marked as failed.
-  
-}); 
+
+});
 
 
 ```

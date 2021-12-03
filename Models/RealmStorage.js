@@ -96,8 +96,8 @@ export default class RealmStorage {
 
   /**
    * Finds the next jobs that are active and not failed
-   * 
-   * @param {*} timeoutUpperBound the maximum timeout value to select. If timeout <= 0, no record will be returned. 
+   *
+   * @param {*} timeoutUpperBound the maximum timeout value to select. If timeout <= 0, no record will be returned.
    * If undefined, the criteria is ignored.
    */
   async findNextJobs(timeoutUpperBound){

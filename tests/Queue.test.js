@@ -6,22 +6,21 @@
 import should from 'should'; // eslint-disable-line no-unused-vars
 import QueueFactory, { Queue } from '../Models/Queue';
 import Worker from '../Models/Worker';
-import MockAsyncStorage from 'mock-async-storage';
-import RealmStorage from '../Models/RealmStorage';
 import DirectAsyncStorage from '../Models/DirectAsyncStorage';
 import CachedAsyncStorage from '../Models/CachedAsyncStorage';
-
+import RealmStorage from '../Models/RealmStorage';
+import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/async-storage-mock';
 
 const mock = () => {
-  const mockImpl = new MockAsyncStorage();
-  jest.mock('@react-native-community/async-storage', () => mockImpl);
+  jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);
 };
 
 mock();
 
-[{storage: () => new RealmStorage(), name:"Realm"}, 
-{storage: () => new DirectAsyncStorage(), name:"DirectAsyncStorage"}, 
-{storage: () => new CachedAsyncStorage(), name:"CachedAsyncStorage"},
+[
+  {storage: () => new RealmStorage(), name:"Realm"},
+  {storage: () => new DirectAsyncStorage(), name:"DirectAsyncStorage"},
+  {storage: () => new CachedAsyncStorage(), name:"CachedAsyncStorage"},
 ]
 .forEach(({storage, name})=>{
   describe(`Models/Queue[${name}]`, function() {
@@ -1579,7 +1578,7 @@ mock();
 
       // Check all jobs created
       const jobs = await queue.getJobs(true);
-      
+
       jobs.length.should.equal(7);
 
       await queue.flushQueue();

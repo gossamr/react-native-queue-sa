@@ -1,6 +1,8 @@
-import AsyncStorage from '@react-native-community/async-storage';
+import EncryptedStorage from 'react-native-encrypted-storage';
+import _ from 'lodash';
 
 const deviceStorage = {
+  keys: {},
   /**
 	 * Get a one or more value for a key or array of keys from AsyncStorage
 	 * @param {String|Array} key A key or array of keys
@@ -8,15 +10,17 @@ const deviceStorage = {
 	 */
   get: async (key) => {
     if(!Array.isArray(key)) {
-      return AsyncStorage.getItem(key).then(value => {
+      return await EncryptedStorage.getItem(key).then(value => {
         return JSON.parse(value);
       });
-    } else {
-      return AsyncStorage.multiGet(key).then(values => {
-        return values.map(value => {
-          return JSON.parse(value[1]);
-        });
-      });
+    }
+    else {
+      let result = [];
+      for (const k of key) {
+        const value = await EncryptedStorage.getItem(k);
+        result.push(JSON.parse(value));
+      }
+      return result;
     }
   },
 
@@ -28,12 +32,14 @@ const deviceStorage = {
 	 */
   save: async (key, value) => {
     if(!Array.isArray(key)) {
-      return AsyncStorage.setItem(key, JSON.stringify(value));
+      this.default.keys[key] = 1
+      return await EncryptedStorage.setItem(key, JSON.stringify(value));
     } else {
-      let pairs = key.map(function(pair) {
-        return [pair[0], JSON.stringify(pair[1])];
+      await key.map(async (pair) => {
+        this.default.keys[pair[0]] = 1;
+        await EncryptedStorage.setItem(pair[0], JSON.stringify(pair[1]));
       });
-      return AsyncStorage.multiSet(pairs);
+      return [];
     }
   },
 
@@ -44,9 +50,16 @@ const deviceStorage = {
 	 */
   delete: async (key) => {
     if (Array.isArray(key)) {
-      return AsyncStorage.multiRemove(key);
+      let res = [];
+      for (const k of key) {
+        delete this.default.keys[k]
+        const r = await EncryptedStorage.removeItem(k);
+        res.push(r);
+      }
+      return res;
     } else {
-      return AsyncStorage.removeItem(key);
+      delete this.default.keys[key]
+      return await EncryptedStorage.removeItem(key);
     }
   },
 
@@ -75,7 +88,7 @@ const deviceStorage = {
    * @return the array of keys in the storage
    */
   getKeys: async (prefix = null) => {
-    let result = await AsyncStorage.getAllKeys();
+    let result = Object.keys(this.default.keys);
     if(prefix){
       result = result.filter((e)=>e.startsWith(prefix));
     }
@@ -86,8 +99,11 @@ const deviceStorage = {
    * Deletes all the items in the storage.
    */
   deleteAll: async ()=>{
-    AsyncStorage.clear();
+    this.default.keys = {};
+    await EncryptedStorage.clear();
   }
 };
+
+_.bindAll(deviceStorage);
 
 export default deviceStorage;

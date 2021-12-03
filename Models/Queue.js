@@ -8,7 +8,6 @@ import uuid from 'react-native-uuid';
 import promiseReflect from 'promise-reflect';
 
 import Worker from './Worker';
-import RealmStorage from './RealmStorage';
 
 export class Queue {
 
@@ -20,7 +19,7 @@ export class Queue {
    * @param storageFactory {()=>Storage} - Factory method returning the storage to be used (defaults to RealmStorage)
    * @param executeFailedJobsOnStart {boolean} - Indicates if previously failed jobs will be executed on start (actually when created new job).
    */
-  constructor(storageFactory = () => new RealmStorage(), executeFailedJobsOnStart = false) {
+  constructor(storageFactory, executeFailedJobsOnStart = false) {
     this.storageFactory = storageFactory;
     this.jobDB = null;
     this.worker = new Worker();
@@ -160,7 +159,7 @@ export class Queue {
     let lifespanRemaining = null;
     let concurrentJobs = [];
 
-   
+
 
     do{
       if (lifespan !== undefined) {
@@ -226,7 +225,7 @@ export class Queue {
     // Get next job from queue.
     let nextJob = null;
 
-    
+
     let timeoutUpperBound = undefined;
     let jobs;
     if(queueLifespanRemaining !== undefined){
@@ -239,7 +238,7 @@ export class Queue {
     }
 
     // If next job exists, get concurrent related jobs appropriately.
-    if (!nextJob) 
+    if (!nextJob)
       return [];
     const concurrency = this.worker.getConcurrency(nextJob.name);
 
@@ -363,8 +362,7 @@ export class Queue {
  *
  * @return {Queue} - A queue instance.
  */
-export default async function queueFactory(storageFactory = () => new RealmStorage(), executeFailedJobsOnStart = false) {
-  
+export default async function queueFactory(storageFactory, executeFailedJobsOnStart = false) {
 
   const queue = new Queue(storageFactory, executeFailedJobsOnStart);
   await queue.init();

@@ -3,7 +3,7 @@ import storage from './Storage';
 
 /**
  * DB Implementation that stores the jobs by id.
- * 
+ *
  * Appropriate for producer/consumer pattern with one of each.
  */
 
