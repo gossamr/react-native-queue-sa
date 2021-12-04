@@ -1,5 +1,4 @@
 import EncryptedStorage from 'react-native-encrypted-storage';
-import _ from 'lodash';
 
 const deviceStorage = {
   keys: {},
@@ -32,11 +31,11 @@ const deviceStorage = {
 	 */
   save: async (key, value) => {
     if(!Array.isArray(key)) {
-      this.default.keys[key] = 1
+      deviceStorage.keys[key] = 1
       return await EncryptedStorage.setItem(key, JSON.stringify(value));
     } else {
       await key.map(async (pair) => {
-        this.default.keys[pair[0]] = 1;
+        deviceStorage.keys[pair[0]] = 1;
         await EncryptedStorage.setItem(pair[0], JSON.stringify(pair[1]));
       });
       return [];
@@ -52,13 +51,13 @@ const deviceStorage = {
     if (Array.isArray(key)) {
       let res = [];
       for (const k of key) {
-        delete this.default.keys[k]
+        delete deviceStorage.keys[k]
         const r = await EncryptedStorage.removeItem(k);
         res.push(r);
       }
       return res;
     } else {
-      delete this.default.keys[key]
+      delete deviceStorage.keys[key]
       return await EncryptedStorage.removeItem(key);
     }
   },
@@ -88,7 +87,7 @@ const deviceStorage = {
    * @return the array of keys in the storage
    */
   getKeys: async (prefix = null) => {
-    let result = Object.keys(this.default.keys);
+    let result = Object.keys(deviceStorage.keys);
     if(prefix){
       result = result.filter((e)=>e.startsWith(prefix));
     }
@@ -99,11 +98,9 @@ const deviceStorage = {
    * Deletes all the items in the storage.
    */
   deleteAll: async ()=>{
-    this.default.keys = {};
+    deviceStorage.keys = {};
     await EncryptedStorage.clear();
   }
 };
-
-_.bindAll(deviceStorage);
 
 export default deviceStorage;
