@@ -9,6 +9,7 @@ import Worker from '../Models/Worker';
 import DirectAsyncStorage from '../Models/DirectAsyncStorage';
 import CachedAsyncStorage from '../Models/CachedAsyncStorage';
 import RealmStorage from '../Models/RealmStorage';
+import MemoryStorage from '../Models/MemoryStorage';
 import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/async-storage-mock';
 
 const mock = () => {
@@ -19,6 +20,7 @@ mock();
 
 [
   {storage: () => new RealmStorage(), name:"Realm"},
+  {storage: () => new MemoryStorage(), name:"MemoryStorage"},
   {storage: () => new DirectAsyncStorage(), name:"DirectAsyncStorage"},
   {storage: () => new CachedAsyncStorage(), name:"CachedAsyncStorage"},
 ]

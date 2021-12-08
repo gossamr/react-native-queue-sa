@@ -102,7 +102,7 @@ export class Queue {
     }
 
     await this.jobDB.create({
-      id: uuid.v4(),
+      id: payload.id || uuid.v4(),
       name,
       payload: JSON.stringify(payload),
       data: JSON.stringify({
@@ -277,17 +277,17 @@ export class Queue {
 
     // Fire onStart job lifecycle callback
     this.worker.executeJobLifecycleCallback('onStart', jobName, jobId, jobPayload);
-
+    let jobResult;
     try {
 
-      await this.worker.executeJob(job);
+      jobResult = await this.worker.executeJob(job);
 
       // On successful job completion, remove job
       await this.jobDB.delete(job);
 
       // Job has processed successfully, fire onSuccess and onComplete job lifecycle callbacks.
-      this.worker.executeJobLifecycleCallback('onSuccess', jobName, jobId, jobPayload);
-      this.worker.executeJobLifecycleCallback('onComplete', jobName, jobId, jobPayload);
+      this.worker.executeJobLifecycleCallback('onSuccess', jobName, jobId, jobPayload, jobResult);
+      this.worker.executeJobLifecycleCallback('onComplete', jobName, jobId, jobPayload, jobResult);
 
     } catch (error) {
 
@@ -327,7 +327,7 @@ export class Queue {
       // If job has failed all attempts execute job onFailed and onComplete lifecycle callbacks.
       if (jobData.failedAttempts >= jobData.attempts) {
         this.worker.executeJobLifecycleCallback('onFailed', jobName, jobId, jobPayload);
-        this.worker.executeJobLifecycleCallback('onComplete', jobName, jobId, jobPayload);
+        this.worker.executeJobLifecycleCallback('onComplete', jobName, jobId, jobPayload, jobResult);
       }
 
     }

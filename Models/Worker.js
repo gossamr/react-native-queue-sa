@@ -116,12 +116,10 @@ export default class Worker {
 
       });
 
-      await Promise.race([timeoutPromise, Worker.workers[jobName](jobId, jobPayload)]);
-
+      return await Promise.race([timeoutPromise, Worker.workers[jobName](jobId, jobPayload)]);
     } else {
-      await Worker.workers[jobName](jobId, jobPayload);
+      return await Worker.workers[jobName](jobId, jobPayload);
     }
-
   }
 
   /**
@@ -133,7 +131,7 @@ export default class Worker {
    * @param jobId {string} - Unique id associated with job.
    * @param jobPayload {object} - Data payload associated with job.
    */
-  async executeJobLifecycleCallback(callbackName, jobName, jobId, jobPayload) {
+  async executeJobLifecycleCallback(callbackName, jobName, jobId, jobPayload, jobResult) {
 
     // Validate callback name
     const validCallbacks = ['onStart', 'onSuccess', 'onFailure', 'onFailed', 'onComplete'];
@@ -146,7 +144,7 @@ export default class Worker {
     if (Worker.workers[jobName].options[callbackName]) {
 
       try {
-        await Worker.workers[jobName].options[callbackName](jobId, jobPayload);
+        await Worker.workers[jobName].options[callbackName](jobId, jobPayload, jobResult);
       } catch (error) {
         console.error(error); // eslint-disable-line no-console
       }
